@@ -252,7 +252,7 @@ const httpServer = http.createServer(async (req, res) => {
       const patch = await readJsonBody(req, 1024 * 1024);
       const prev = readPrefs();
       const next = { ...prev };
-      const allowedKeys = ['activePreset', 'panelMode', 'savedWidth', 'miniWidth', 'miniHeight', 'userCollapsed', 'tabYRatio'];
+      const allowedKeys = ['activePreset', 'panelMode', 'savedWidth', 'miniWidth', 'miniHeight', 'userCollapsed', 'tabYRatio', 'langMode'];
       for (const k of allowedKeys) {
         if (Object.prototype.hasOwnProperty.call(patch, k)) {
           next[k] = patch[k];

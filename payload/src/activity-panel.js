@@ -1,4 +1,4 @@
-// Встроенная правая панель «Статус агента» (v1.5.1 — постоянное хранение пресетов и настроек на диске)
+// Встроенная правая панель «Статус агента» (v1.6.0 — адаптивная локализация EN/RU под язык приложения)
 function initActivityPanel() {
     const STYLE_ID = 'ag-activity-panel-style';
     const PANEL_ID = 'ag-activity-panel-root';
@@ -13,7 +13,89 @@ function initActivityPanel() {
     const STORAGE_PRESET_KEY = 'ag_activity_panel_preset';
     const STORAGE_CUSTOM_PRESETS_KEY = 'ag_activity_custom_presets';
     const STORAGE_TAB_Y_KEY = 'ag_activity_tab_y_ratio';
+    const STORAGE_LANG_KEY = 'ag_activity_panel_lang';
     const VALID_PRESETS = ['spider', 'cat', 'snake', 'koi', 'lobster', 'blue-lobster'];
+
+    const I18N = {
+        en: {
+            title: 'Agent Status',
+            settingsTitle: 'Settings',
+            collapseTitle: 'Collapse panel',
+            resizeWidthTitle: 'Resize panel width',
+            resizeCornerTitle: 'Drag to resize',
+            tabTitle: 'Open Agent Status panel (drag up/down to move)',
+            ready: 'Ready',
+            workingShort: 'Working…',
+            thinkingShort: 'Thinking…',
+            workingFallback: 'Working on task…',
+            settingsHeading: 'Panel Settings',
+            langLabel: 'Language',
+            langAuto: 'Auto',
+            modeLabel: 'Panel mode',
+            modeFull: 'Full',
+            modeMini: 'Compact',
+            slotWorking: 'While working',
+            slotIdle: 'While idle',
+            uploadGif: 'Upload GIF',
+            resetPresetTitle: 'Reset to preset',
+            tagCustom: 'Custom ✓',
+            tagLoading: 'Loading…',
+            tagError: 'Error',
+            noteHtml: 'GIF, WebP, PNG, JPG (drag &amp; drop)<br/>Optimal: <b>1:1</b>, <b>256–512 px</b>',
+            presetPlaceholder: 'Custom preset name…',
+            presetSave: '+ Save',
+            presetSaveTitle: 'Save current animations as a new preset',
+            presetSpider: 'Spider',
+            presetCat: 'Cat',
+            presetSnake: 'Snake',
+            presetKoi: 'Koi',
+            presetLobster: 'Lobster',
+            presetSelect: 'Select',
+            presetSelected: 'Selected ✓',
+            presetBlueSecret: 'Blue ⚡',
+            deletePresetTitle: 'Delete preset',
+            done: 'Done'
+        },
+        ru: {
+            title: 'Статус агента',
+            settingsTitle: 'Настройки',
+            collapseTitle: 'Свернуть панель',
+            resizeWidthTitle: 'Изменить ширину панели',
+            resizeCornerTitle: 'Потяните, чтобы изменить размер окна',
+            tabTitle: 'Открыть панель «Статус агента» (потяните вверх/вниз для перемещения)',
+            ready: 'Готов к работе',
+            workingShort: 'Работаю…',
+            thinkingShort: 'Думаю…',
+            workingFallback: 'Выполняю задачу…',
+            settingsHeading: 'Настройки панели',
+            langLabel: 'Язык',
+            langAuto: 'Авто',
+            modeLabel: 'Вид панели',
+            modeFull: 'Полный',
+            modeMini: 'Компактный',
+            slotWorking: 'Во время работы',
+            slotIdle: 'В режиме ожидания',
+            uploadGif: 'Загрузить GIF',
+            resetPresetTitle: 'Вернуть пресет',
+            tagCustom: 'Своя ✓',
+            tagLoading: 'Загрузка…',
+            tagError: 'Ошибка',
+            noteHtml: 'GIF, WebP, PNG, JPG (можно перетащить)<br/>Оптимально: <b>1:1</b>, <b>256–512 px</b>',
+            presetPlaceholder: 'Название своего пресета…',
+            presetSave: '+ Сохранить',
+            presetSaveTitle: 'Сохранить текущие анимации как новый пресет',
+            presetSpider: 'Паук',
+            presetCat: 'Кот',
+            presetSnake: 'Змея',
+            presetKoi: 'Карп',
+            presetLobster: 'Лобстер',
+            presetSelect: 'Выбрать',
+            presetSelected: 'Выбрано ✓',
+            presetBlueSecret: 'Синий ⚡',
+            deletePresetTitle: 'Удалить пресет',
+            done: 'Готово'
+        }
+    };
 
     // Пороги автосворачивания (с гистерезисом, чтобы не мигало на границе при ресайзе окна)
     const MIN_PANEL_HIDE_W = 188;
@@ -162,6 +244,88 @@ function initActivityPanel() {
         const ty = parseFloat(localStorage.getItem(STORAGE_TAB_Y_KEY) || '');
         if (!Number.isNaN(ty) && ty >= 0 && ty <= 1) tabYRatio = ty;
     } catch (e) {}
+
+    let langMode = 'auto';
+    try {
+        const lm = localStorage.getItem(STORAGE_LANG_KEY);
+        if (lm === 'en' || lm === 'ru' || lm === 'auto') langMode = lm;
+    } catch (e) {}
+
+    function detectAppLanguage() {
+        try {
+            // 1. Проверяем плейсхолдер поля ввода чата — самый точный индикатор языка UI Antigravity
+            const inputs = document.querySelectorAll('textarea[placeholder], [contenteditable="true"][data-placeholder], [aria-placeholder]');
+            for (const el of inputs) {
+                if (el.closest && el.closest('#' + PANEL_ID)) continue;
+                const ph = (el.getAttribute('placeholder') || el.getAttribute('data-placeholder') || el.getAttribute('aria-placeholder') || '').trim();
+                if (!ph) continue;
+                if (/[А-Яа-яЁё]{3,}/.test(ph)) return 'ru';
+                if (/[A-Za-z]{3,}/.test(ph)) return 'en';
+            }
+            // 2. Проверяем системные кнопки навигации / шапки (вне нашей панели и сообщений чата)
+            let ruHits = 0;
+            let enHits = 0;
+            const uiEls = document.querySelectorAll('header button, nav button, [role="navigation"] button, [role="tablist"] button, [role="menubar"] button');
+            for (const el of uiEls) {
+                if (el.closest && (el.closest('#' + PANEL_ID) || el.closest('#' + TAB_ID))) continue;
+                const txt = (el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || '').trim();
+                if (txt.length < 3 || txt.length > 40) continue;
+                if (/[А-Яа-яЁё]{3,}/.test(txt)) ruHits += 1;
+                else if (/[A-Za-z]{3,}/.test(txt)) enHits += 1;
+            }
+            if (ruHits > 0 || enHits > 0) {
+                return ruHits >= enHits ? 'ru' : 'en';
+            }
+        } catch (e) {}
+        // 3. Фолбэк на локаль документа/браузера при раннем старте
+        const docLang = (document.documentElement && document.documentElement.lang) || '';
+        const navLang = (typeof navigator !== 'undefined' && navigator.language) || '';
+        const raw = (docLang || navLang || 'en').toLowerCase();
+        return /^(ru|uk|be|kk)/.test(raw) ? 'ru' : 'en';
+    }
+
+    let effectiveLang = langMode === 'auto' ? detectAppLanguage() : langMode;
+    const t = (key) => (I18N[effectiveLang] && I18N[effectiveLang][key]) || I18N.en[key] || key;
+
+    function localizeStatusDetail(rawDetail) {
+        const s = String(rawDetail || '').trim();
+        if (!s) return t('workingFallback');
+        if (effectiveLang === 'ru') return s;
+        const exactMap = {
+            'Думаю…': 'Thinking…',
+            'Обрабатываю…': 'Processing…',
+            'Работаю…': 'Working…',
+            'Анализирую запрос…': 'Analyzing request…',
+            'Выполняю задачу…': 'Working on task…',
+            'Выполняю команду…': 'Running command…',
+            'Читаю файл…': 'Reading file…',
+            'Записываю файл…': 'Writing file…',
+            'Редактирую файл…': 'Editing file…',
+            'Ищу в интернете…': 'Searching the web…',
+            'Запускаю субагента…': 'Running subagent…',
+            'Вызываю MCP-инструмент…': 'Calling MCP tool…',
+            'Обновляю статус…': 'Updating status…',
+            'Обновляю план…': 'Updating plan…',
+            'Проверяю фоновую задачу…': 'Checking background task…',
+            'Ожидание задачи': 'Waiting for task',
+            'Ответ готов': 'Response ready',
+            'Готов к работе': 'Ready'
+        };
+        if (exactMap[s]) return exactMap[s];
+        const prefixMap = [
+            ['Читаю ', 'Reading '],
+            ['Редактирую ', 'Editing '],
+            ['Записываю ', 'Writing '],
+            ['Команда: ', 'Command: '],
+            ['Ищу: ', 'Searching: '],
+            ['Агент: ', 'Agent: '],
+            ['Инструмент: ', 'Tool: ']
+        ];
+        for (const [ruPrefix, enPrefix] of prefixMap) {
+            if (s.startsWith(ruPrefix)) return enPrefix + s.slice(ruPrefix.length);
+        }
+        return s;
+    }
 
     const style = document.createElement('style');
     style.id = STYLE_ID;
@@ -919,16 +1083,16 @@ function initActivityPanel() {
     const panel = document.createElement('aside');
     panel.id = PANEL_ID;
     panel.innerHTML = `
-        <div class="ag-act-resizer" id="ag-act-resizer" title="Изменить ширину панели"></div>
-        <div class="ag-act-corner-resizer" id="ag-act-corner-resizer" title="Потяните, чтобы изменить размер окна">↙</div>
+        <div class="ag-act-resizer" id="ag-act-resizer" data-i18n-title="resizeWidthTitle" title="Изменить ширину панели"></div>
+        <div class="ag-act-corner-resizer" id="ag-act-corner-resizer" data-i18n-title="resizeCornerTitle" title="Потяните, чтобы изменить размер окна">↙</div>
         <div class="ag-act-header">
             <div class="ag-act-title">
                 <span class="ag-act-header-dot" id="ag-act-header-dot"></span>
-                <span>Статус агента</span>
+                <span data-i18n="title">Статус агента</span>
             </div>
             <div class="ag-act-header-actions">
-                <button class="ag-act-icon-btn" id="ag-act-settings-btn" title="Настройки">⚙</button>
-                <button class="ag-act-collapse-btn" id="ag-act-collapse-btn" title="Свернуть панель">›</button>
+                <button class="ag-act-icon-btn" id="ag-act-settings-btn" data-i18n-title="settingsTitle" title="Настройки">⚙</button>
+                <button class="ag-act-collapse-btn" id="ag-act-collapse-btn" data-i18n-title="collapseTitle" title="Свернуть панель">›</button>
             </div>
         </div>
         <div class="ag-act-body">
@@ -948,80 +1112,90 @@ function initActivityPanel() {
                 </div>
                 <div class="ag-act-idle-badge">
                     <span class="ag-act-idle-dot"></span>
-                    <span>Готов к работе</span>
+                    <span data-i18n="ready">Готов к работе</span>
                 </div>
                 <div class="ag-act-idle-spacer" aria-hidden="true">00:00</div>
             </div>
             <div class="ag-act-settings" id="ag-act-settings">
-                <div class="ag-act-set-heading">Настройки панели</div>
+                <div class="ag-act-set-heading" data-i18n="settingsHeading">Настройки панели</div>
                 <div class="ag-act-slot">
                     <div class="ag-act-slot-label">
-                        <span>Вид панели</span>
+                        <span data-i18n="modeLabel">Вид панели</span>
                     </div>
                     <div class="ag-act-seg">
-                        <button class="ag-act-seg-btn" id="ag-act-mode-full" type="button">Полный</button>
-                        <button class="ag-act-seg-btn" id="ag-act-mode-mini" type="button">Компактный</button>
+                        <button class="ag-act-seg-btn" id="ag-act-mode-full" data-i18n="modeFull" type="button">Полный</button>
+                        <button class="ag-act-seg-btn" id="ag-act-mode-mini" data-i18n="modeMini" type="button">Компактный</button>
+                    </div>
+                </div>
+                <div class="ag-act-slot">
+                    <div class="ag-act-slot-label">
+                        <span data-i18n="langLabel">Язык</span>
+                    </div>
+                    <div class="ag-act-seg">
+                        <button class="ag-act-seg-btn" id="ag-act-lang-auto" data-i18n="langAuto" type="button">Авто</button>
+                        <button class="ag-act-seg-btn" id="ag-act-lang-en" type="button">EN</button>
+                        <button class="ag-act-seg-btn" id="ag-act-lang-ru" type="button">RU</button>
                     </div>
                 </div>
                 <div class="ag-act-slot" id="ag-act-slot-working">
                     <div class="ag-act-slot-label">
-                        <span>Во время работы</span>
+                        <span data-i18n="slotWorking">Во время работы</span>
                         <span class="ag-act-slot-tag" id="ag-act-tag-working"></span>
                     </div>
                     <div class="ag-act-slot-actions">
-                        <button class="ag-act-btn" id="ag-act-pick-working" type="button">Загрузить GIF</button>
-                        <button class="ag-act-btn reset" id="ag-act-reset-working" type="button" title="Вернуть пресет">↺</button>
+                        <button class="ag-act-btn" id="ag-act-pick-working" data-i18n="uploadGif" type="button">Загрузить GIF</button>
+                        <button class="ag-act-btn reset" id="ag-act-reset-working" data-i18n-title="resetPresetTitle" type="button" title="Вернуть пресет">↺</button>
                     </div>
                 </div>
                 <div class="ag-act-slot" id="ag-act-slot-idle">
                     <div class="ag-act-slot-label">
-                        <span>В режиме ожидания</span>
+                        <span data-i18n="slotIdle">В режиме ожидания</span>
                         <span class="ag-act-slot-tag" id="ag-act-tag-idle"></span>
                     </div>
                     <div class="ag-act-slot-actions">
-                        <button class="ag-act-btn" id="ag-act-pick-idle" type="button">Загрузить GIF</button>
-                        <button class="ag-act-btn reset" id="ag-act-reset-idle" type="button" title="Вернуть пресет">↺</button>
+                        <button class="ag-act-btn" id="ag-act-pick-idle" data-i18n="uploadGif" type="button">Загрузить GIF</button>
+                        <button class="ag-act-btn reset" id="ag-act-reset-idle" data-i18n-title="resetPresetTitle" type="button" title="Вернуть пресет">↺</button>
                     </div>
                 </div>
-                <div class="ag-act-set-note">
+                <div class="ag-act-set-note" data-i18n-html="noteHtml">
                     GIF, WebP, PNG, JPG (можно перетащить)<br/>
                     Оптимально: <b>1:1</b>, <b>256–512 px</b>
                 </div>
                 <div class="ag-act-preset-create">
-                    <input class="ag-act-preset-input" id="ag-act-preset-name-input" type="text" maxlength="20" placeholder="Название своего пресета…" />
-                    <button class="ag-act-btn ag-act-preset-save-btn" id="ag-act-preset-save-btn" type="button" title="Сохранить текущие анимации как новый пресет">+ Сохранить</button>
+                    <input class="ag-act-preset-input" id="ag-act-preset-name-input" data-i18n-placeholder="presetPlaceholder" type="text" maxlength="20" placeholder="Название своего пресета…" />
+                    <button class="ag-act-btn ag-act-preset-save-btn" id="ag-act-preset-save-btn" data-i18n="presetSave" data-i18n-title="presetSaveTitle" type="button" title="Сохранить текущие анимации как новый пресет">+ Сохранить</button>
                 </div>
                 <div class="ag-act-preset-list" id="ag-act-preset-list">
                     <div class="ag-act-preset-row">
-                        <span class="ag-act-preset-name">Паук</span>
+                        <span class="ag-act-preset-name" data-i18n="presetSpider">Паук</span>
                         <button class="ag-act-preset-box" data-preset="spider" type="button">
                             <img class="ag-act-preset-thumb" data-thumb="spider" alt="" />
                             <span class="ag-act-preset-state">Выбрать</span>
                         </button>
                     </div>
                     <div class="ag-act-preset-row">
-                        <span class="ag-act-preset-name">Кот</span>
+                        <span class="ag-act-preset-name" data-i18n="presetCat">Кот</span>
                         <button class="ag-act-preset-box" data-preset="cat" type="button">
                             <img class="ag-act-preset-thumb" data-thumb="cat" alt="" />
                             <span class="ag-act-preset-state">Выбрать</span>
                         </button>
                     </div>
                     <div class="ag-act-preset-row">
-                        <span class="ag-act-preset-name">Змея</span>
+                        <span class="ag-act-preset-name" data-i18n="presetSnake">Змея</span>
                         <button class="ag-act-preset-box" data-preset="snake" type="button">
                             <img class="ag-act-preset-thumb" data-thumb="snake" alt="" />
                             <span class="ag-act-preset-state">Выбрать</span>
                         </button>
                     </div>
                     <div class="ag-act-preset-row">
-                        <span class="ag-act-preset-name">Карп</span>
+                        <span class="ag-act-preset-name" data-i18n="presetKoi">Карп</span>
                         <button class="ag-act-preset-box" data-preset="koi" type="button">
                             <img class="ag-act-preset-thumb" data-thumb="koi" alt="" />
                             <span class="ag-act-preset-state">Выбрать</span>
                         </button>
                     </div>
                     <div class="ag-act-preset-row">
-                        <span class="ag-act-preset-name">Лобстер</span>
+                        <span class="ag-act-preset-name" data-i18n="presetLobster">Лобстер</span>
                         <button class="ag-act-preset-box" data-preset="lobster" type="button">
                             <img class="ag-act-preset-thumb" data-thumb="lobster" alt="" />
                             <span class="ag-act-preset-state">Выбрать</span>
@@ -1029,7 +1203,7 @@ function initActivityPanel() {
                     </div>
                     <div id="ag-act-custom-presets-container" style="display:flex;flex-direction:column;gap:7px;"></div>
                 </div>
-                <button class="ag-act-btn primary ag-act-settings-done-btn" id="ag-act-settings-done" type="button">Готово</button>
+                <button class="ag-act-btn primary ag-act-settings-done-btn" id="ag-act-settings-done" data-i18n="done" type="button">Готово</button>
                 <input type="file" id="ag-act-file-working" accept="image/gif,image/webp,image/png,image/jpeg" style="display:none" />
                 <input type="file" id="ag-act-file-idle" accept="image/gif,image/webp,image/png,image/jpeg" style="display:none" />
             </div>
@@ -1934,6 +2108,9 @@ function initActivityPanel() {
     const settingsDoneBtn = document.getElementById('ag-act-settings-done');
     const modeFullBtn = document.getElementById('ag-act-mode-full');
     const modeMiniBtn = document.getElementById('ag-act-mode-mini');
+    const langAutoBtn = document.getElementById('ag-act-lang-auto');
+    const langEnBtn = document.getElementById('ag-act-lang-en');
+    const langRuBtn = document.getElementById('ag-act-lang-ru');
     const slotWorkingEl = document.getElementById('ag-act-slot-working');
     const slotIdleEl = document.getElementById('ag-act-slot-idle');
     const tagWorkingEl = document.getElementById('ag-act-tag-working');
@@ -1944,6 +2121,68 @@ function initActivityPanel() {
     const resetIdleBtn = document.getElementById('ag-act-reset-idle');
     const fileWorkingInput = document.getElementById('ag-act-file-working');
     const fileIdleInput = document.getElementById('ag-act-file-idle');
+
+    const updateLangButtons = () => {
+        if (langAutoBtn) langAutoBtn.classList.toggle('active', langMode === 'auto');
+        if (langEnBtn) langEnBtn.classList.toggle('active', langMode === 'en');
+        if (langRuBtn) langRuBtn.classList.toggle('active', langMode === 'ru');
+    };
+
+    const applyTranslations = () => {
+        panel.querySelectorAll('[data-i18n]').forEach((el) => {
+            const k = el.getAttribute('data-i18n');
+            if (k) el.textContent = t(k);
+        });
+        panel.querySelectorAll('[data-i18n-html]').forEach((el) => {
+            const k = el.getAttribute('data-i18n-html');
+            if (k) el.innerHTML = t(k);
+        });
+        panel.querySelectorAll('[data-i18n-title]').forEach((el) => {
+            const k = el.getAttribute('data-i18n-title');
+            if (k) el.title = t(k);
+        });
+        panel.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+            const k = el.getAttribute('data-i18n-placeholder');
+            if (k) el.placeholder = t(k);
+        });
+        tab.title = t('tabTitle');
+        if (tagWorkingEl && tagWorkingEl.dataset.tagKey) {
+            tagWorkingEl.textContent = t(tagWorkingEl.dataset.tagKey);
+        }
+        if (tagIdleEl && tagIdleEl.dataset.tagKey) {
+            tagIdleEl.textContent = t(tagIdleEl.dataset.tagKey);
+        }
+        panel.querySelectorAll('.ag-act-preset-del').forEach((btn) => {
+            const nm = btn.getAttribute('data-preset-name') || '';
+            btn.title = nm ? `${t('deletePresetTitle')} «${nm}»` : t('deletePresetTitle');
+        });
+        updateLangButtons();
+        updatePresetThemeAndUI();
+        renderStatus();
+    };
+
+    const setLangMode = (nextLang, persist) => {
+        langMode = (nextLang === 'en' || nextLang === 'ru') ? nextLang : 'auto';
+        effectiveLang = langMode === 'auto' ? detectAppLanguage() : langMode;
+        if (persist !== false) {
+            try { localStorage.setItem(STORAGE_LANG_KEY, langMode); } catch (e) {}
+            savePrefsToServer({ langMode });
+        }
+        applyTranslations();
+    };
+
+    const refreshAutoLanguage = () => {
+        if (langMode !== 'auto') return;
+        const detected = detectAppLanguage();
+        if (detected !== effectiveLang) {
+            effectiveLang = detected;
+            applyTranslations();
+        }
+    };
+
+    if (langAutoBtn) langAutoBtn.addEventListener('click', () => setLangMode('auto', true));
+    if (langEnBtn) langEnBtn.addEventListener('click', () => setLangMode('en', true));
+    if (langRuBtn) langRuBtn.addEventListener('click', () => setLangMode('ru', true));
 
     const updateModeButtons = () => {
         if (modeFullBtn) modeFullBtn.classList.toggle('active', panelMode === 'full');
@@ -1981,24 +2220,31 @@ function initActivityPanel() {
         }
     }
 
-    function setSlotTag(slot, text) {
+    function setSlotTag(slot, tagKey) {
         const el = slot === 'working' ? tagWorkingEl : tagIdleEl;
-        if (el) el.textContent = text || '';
+        if (!el) return;
+        if (!tagKey) {
+            el.dataset.tagKey = '';
+            el.textContent = '';
+            return;
+        }
+        el.dataset.tagKey = tagKey;
+        el.textContent = t(tagKey);
     }
 
     async function applyCustomFile(slot, file) {
         if (!file || !file.type || !file.type.startsWith('image/')) return;
         const imgEl = slot === 'working' ? elImgWorking : elImgIdle;
-        setSlotTag(slot, 'Загрузка…');
+        setSlotTag(slot, 'tagLoading');
         try {
             const buf = await file.arrayBuffer();
             const mime = file.type || 'image/gif';
             const dataUri = `data:${mime};base64,` + arrayBufferToBase64(buf);
             setImgSrc(imgEl, dataUri);
             await idbSetSlot(slot, { dataUri, name: file.name || 'custom' });
-            setSlotTag(slot, 'Своя ✓');
+            setSlotTag(slot, 'tagCustom');
         } catch (e) {
-            setSlotTag(slot, 'Ошибка');
+            setSlotTag(slot, 'tagError');
         }
     }
 
@@ -2075,7 +2321,13 @@ function initActivityPanel() {
                 try { localStorage.setItem(STORAGE_TAB_Y_KEY, tabYRatio.toFixed(4)); } catch (e) {}
                 applyTabPosition();
             }
+            if (prefs.langMode === 'auto' || prefs.langMode === 'en' || prefs.langMode === 'ru') {
+                langMode = prefs.langMode;
+                effectiveLang = langMode === 'auto' ? detectAppLanguage() : langMode;
+                try { localStorage.setItem(STORAGE_LANG_KEY, langMode); } catch (e) {}
+            }
             renderCustomPresetsList();
+            applyTranslations();
             if (layoutChanged) syncLayout(true);
         } catch (e) {
             // Сервер ещё запускается — повторим при следующей попытке ensureAssetsLoaded
@@ -2097,9 +2349,9 @@ function initActivityPanel() {
             btn.classList.toggle('blue-secret', p === 'lobster' && isBlue);
             const st = btn.querySelector('.ag-act-preset-state');
             if (st) {
-                if (p === 'lobster' && isBlue) st.textContent = 'Синий ⚡';
-                else if (isMatch) st.textContent = 'Выбрано ✓';
-                else st.textContent = 'Выбрать';
+                if (p === 'lobster' && isBlue) st.textContent = t('presetBlueSecret');
+                else if (isMatch) st.textContent = t('presetSelected');
+                else st.textContent = t('presetSelect');
             }
         });
         // Обновляем мини-превью на кнопке лобстера (синий / красный)
@@ -2202,7 +2454,7 @@ function initActivityPanel() {
 
             const st = document.createElement('span');
             st.className = 'ag-act-preset-state';
-            st.textContent = 'Выбрать';
+            st.textContent = t('presetSelect');
 
             btn.appendChild(thumb);
             btn.appendChild(st);
@@ -2214,7 +2466,8 @@ function initActivityPanel() {
             const delBtn = document.createElement('button');
             delBtn.className = 'ag-act-preset-del';
             delBtn.type = 'button';
-            delBtn.title = `Удалить пресет «${cp.name}»`;
+            delBtn.setAttribute('data-preset-name', cp.name);
+            delBtn.title = `${t('deletePresetTitle')} «${cp.name}»`;
             delBtn.textContent = '×';
             delBtn.addEventListener('click', (ev) => {
                 ev.stopPropagation();
@@ -2388,7 +2641,7 @@ function initActivityPanel() {
         const custom = await idbGetSlot(slot);
         if (custom && custom.dataUri) {
             setImgSrc(slot === 'working' ? elImgWorking : elImgIdle, custom.dataUri);
-            setSlotTag(slot, 'Своя ✓');
+            setSlotTag(slot, 'tagCustom');
             return;
         }
         await loadDefaultSlot(slot);
@@ -2490,14 +2743,14 @@ function initActivityPanel() {
             elIdle.classList.remove('active');
             const hookDetail = (currentState.detail || '').trim();
             if (panelMode === 'mini') {
-                // В компактном виде показываем только короткий статус («Думаю…» / «Работаю…»),
+                // В компактном виде показываем только короткий статус,
                 // чтобы длинный текст не сжимал и не дёргал круг с гифкой
-                const isThinking = !hookDetail || hookDetail === 'Думаю…' || hookDetail.startsWith('Анализир');
-                elDetail.textContent = isThinking ? 'Думаю…' : 'Работаю…';
+                const isThinking = !hookDetail || hookDetail === 'Думаю…' || hookDetail.startsWith('Анализир') || /^think|^analyz/i.test(hookDetail);
+                elDetail.textContent = isThinking ? t('thinkingShort') : t('workingShort');
             } else {
                 const isGeneric = !hookDetail || hookDetail === 'Думаю…' || hookDetail === 'Обрабатываю…' || hookDetail === 'Работаю…';
                 const liveDom = isGeneric ? readLiveDomStatus() : '';
-                elDetail.textContent = liveDom || hookDetail || 'Выполняю задачу…';
+                elDetail.textContent = liveDom || localizeStatusDetail(hookDetail);
             }
             elTimer.textContent = formatElapsed(now - (currentState.startedAt || now));
         } else {
@@ -2524,10 +2777,14 @@ function initActivityPanel() {
         }
     }
 
+    applyTranslations();
     ensureAssetsLoaded();
     pollStatus();
     window.__ag_activity_panel_poll = setInterval(pollStatus, 450);
-    window.__ag_activity_panel_tick = setInterval(renderStatus, 500);
+    window.__ag_activity_panel_tick = setInterval(() => {
+        refreshAutoLanguage();
+        renderStatus();
+    }, 500);
     // Регулярная синхронизация (600 мс) гарантирует мгновенную подстройку при переключении на старые чаты
     window.__ag_activity_panel_top_sync = setInterval(() => syncLayout(false), 600);
 

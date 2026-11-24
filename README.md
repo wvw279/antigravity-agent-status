@@ -1,6 +1,6 @@
 # Agent Status for Antigravity
 
-![Version](https://img.shields.io/badge/version-v1.5.1-d98a3c?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.6.0-d98a3c?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-2b2b34?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-4caf50?style=flat-square)
 
