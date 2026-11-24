@@ -17,48 +17,48 @@ for (const a of process.argv.slice(2)) {
 }
 
 console.log('==========================================================');
-console.log('  Удаление панели «Статус агента» из Antigravity');
+console.log('  Uninstalling Agent Status from Antigravity');
 console.log('==========================================================\n');
 
 const patcherScript = path.join(PLUGIN_DIR, 'patch-asar.mjs');
 if (fs.existsSync(patcherScript)) {
-  console.log('[1/3] Удаляю загрузчик из app.asar...');
+  console.log('[1/3] Removing loader from app.asar...');
   try {
     const args = [patcherScript, '--unpatch'];
     if (explicitAsar) args.push('--asar=' + explicitAsar);
     execFileSync(process.execPath, args, { stdio: 'inherit' });
   } catch (err) {
-    console.error('\n[ОШИБКА] Не удалось очистить app.asar.');
-    console.error('Закройте Antigravity полностью и повторите удаление.');
+    console.error('\n[ERROR] Failed to restore app.asar.');
+    console.error('Please close Antigravity completely and try again.');
     process.exit(1);
   }
 } else {
-  console.log('[1/3] Скрипт patch-asar.mjs не найден — пропускаю очистку app.asar.');
+  console.log('[1/3] patch-asar.mjs not found — skipping app.asar cleanup.');
 }
 
-console.log('\n[2/3] Убираю плагин из config.json...');
+console.log('\n[2/3] Removing plugin entry from config.json...');
 try {
   if (fs.existsSync(CONFIG_JSON_PATH)) {
     const cfg = JSON.parse(fs.readFileSync(CONFIG_JSON_PATH, 'utf8'));
     if (cfg && cfg.plugins && cfg.plugins['activity-indicator']) {
       delete cfg.plugins['activity-indicator'];
       fs.writeFileSync(CONFIG_JSON_PATH, JSON.stringify(cfg, null, 2), 'utf8');
-      console.log('[OK] Убрано из config.json');
+      console.log('[OK] Removed from config.json');
     }
   }
 } catch {}
 
-console.log('\n[3/3] Удаляю файлы плагина...');
+console.log('\n[3/3] Removing plugin files...');
 if (fs.existsSync(PLUGIN_DIR)) {
   fs.rmSync(PLUGIN_DIR, { recursive: true, force: true });
-  console.log('[OK] Удалено: ' + PLUGIN_DIR);
+  console.log('[OK] Removed: ' + PLUGIN_DIR);
 } else {
-  console.log('[OK] Папка плагина уже отсутствует.');
+  console.log('[OK] Plugin directory already absent.');
 }
 
 if (fs.existsSync(PLUGIN_DATA_DIR)) {
   fs.rmSync(PLUGIN_DATA_DIR, { recursive: true, force: true });
-  console.log('[OK] Удалены данные: ' + PLUGIN_DATA_DIR);
+  console.log('[OK] Removed plugin data: ' + PLUGIN_DATA_DIR);
 }
 
-console.log('\n[ГОТОВО] Панель «Статус агента» полностью удалена.');
+console.log('\n[DONE] Agent Status has been completely removed.');

@@ -1,28 +1,28 @@
-Панель «Статус агента» (v1.5.1) для Antigravity
-=====================================================
+Agent Status Panel (v1.5.1) for Antigravity
+===============================================
 
-Что это такое:
-- Полностью автономный плагин для Antigravity с живой правой панелью статуса работы
-  агента, таймером и 3D-анимациями (не требует никаких сторонних патчеров).
-- Два режима отображения:
-  • Полный — высокая панель справа с подробным статусом действий агента.
-  • Компактный — аккуратная карточка в правом верхнем углу (растягивается за угол).
-- Свёрнутый язычок можно свободно перетаскивать вверх и вниз по правой грани окна.
-- 5 встроенных пресетов животных (Паук, Кот, Змея, Карп, Лобстер).
-- Создание своих пользовательских пресетов с любыми названиями и GIF/WebP/PNG.
-- Все настройки и пресеты сохраняются на диск и не сбрасываются после перезапуска.
+Features:
+- Fully standalone plugin for Antigravity with a live right-side agent status panel,
+  elapsed timer, and 3D animations (no third-party patchers required).
+- Two display modes:
+  * Full mode — tall right-side panel with live agent activity details.
+  * Compact mode — sleek corner card in the top-right corner (resizable).
+- Draggable edge tab when collapsed.
+- 5 built-in animal presets (Spider, Cat, Snake, Koi, Lobster).
+- Create custom presets with your own names and GIF/WebP/PNG/JPG animations.
+- Persistent local storage — your selected and custom presets survive restarts.
 
-Требования:
-- Windows 10 / 11 + установленный Antigravity
-- Установленный Node.js LTS (https://nodejs.org) — установщик сам проверит наличие
-- Интернет на 5 секунд при первой установке (для скачивания MCP SDK)
+Requirements:
+- Windows 10 / 11 + Antigravity installed
+- Node.js LTS (https://nodejs.org) — checked automatically by the installer
+- Brief internet connection (~5 sec) on first install for @modelcontextprotocol/sdk
 
-Как установить:
-1. РАСПАКУЙТЕ весь архив в обычную папку (правой кнопкой по ZIP -> «Извлечь все»).
-2. Запустите двойным кликом файл «УСТАНОВИТЬ.bat».
-3. В открывшемся окне нажмите «Установить / Обновить».
-   Установщик сам закроет Antigravity, установит плагин, включит его в config.json,
-   пропатчит интерфейс и сам снова запустит Antigravity уже с панелью!
+How to install:
+1. EXTRACT the entire ZIP archive to a regular folder (Right-click -> Extract All).
+2. Double-click INSTALL.bat.
+3. Click "Install / Update".
+   The installer will close Antigravity, install and enable the plugin, patch app.asar,
+   and automatically relaunch Antigravity with the panel ready!
 
-Как удалить:
-- Запустите «УСТАНОВИТЬ.bat» (или «УДАЛИТЬ.bat») и нажмите кнопку «Удалить плагин».
+How to uninstall:
+- Run INSTALL.bat (or UNINSTALL.bat) and click "Uninstall".

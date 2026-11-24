@@ -38,7 +38,6 @@ function Find-AntigravityExe {
     foreach ($c in $candidates) {
         if ($c -and (Test-Path $c)) { return $c }
     }
-    # Поиск по ярлыкам в меню Пуск и на Рабочем столе
     try {
         $wsh = New-Object -ComObject WScript.Shell
         $lnkDirs = @(
@@ -69,7 +68,6 @@ function Resolve-AsarFromExe($exePath) {
     return $null
 }
 
-# Цвета в стиле Antigravity
 $BgDark    = [System.Drawing.Color]::FromArgb(17, 17, 20)
 $BgPanel   = [System.Drawing.Color]::FromArgb(26, 26, 31)
 $BgLog     = [System.Drawing.Color]::FromArgb(12, 12, 15)
@@ -81,7 +79,7 @@ $DangerFg  = [System.Drawing.Color]::FromArgb(248, 160, 160)
 $GreenFg   = [System.Drawing.Color]::FromArgb(110, 224, 138)
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "Статус агента ($Version) — Установщик для Antigravity"
+$form.Text = "Agent Status ($Version) — Installer for Antigravity"
 $form.Size = New-Object System.Drawing.Size(580, 470)
 $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
@@ -91,7 +89,7 @@ $form.ForeColor = $FgText
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
 
 $lblTitle = New-Object System.Windows.Forms.Label
-$lblTitle.Text = "Панель «Статус агента» $Version"
+$lblTitle.Text = "Agent Status Panel $Version"
 $lblTitle.Font = New-Object System.Drawing.Font('Segoe UI', 14, [System.Drawing.FontStyle]::Bold)
 $lblTitle.ForeColor = $FgText
 $lblTitle.Location = New-Object System.Drawing.Point(22, 16)
@@ -99,13 +97,12 @@ $lblTitle.AutoSize = $true
 $form.Controls.Add($lblTitle)
 
 $lblSub = New-Object System.Windows.Forms.Label
-$lblSub.Text = "Автономная установка: 5 пресетов + свои пресеты с сохранением + перетаскивание язычка"
+$lblSub.Text = "Standalone installer: 5 built-in presets, custom presets, persistent storage & draggable tab"
 $lblSub.ForeColor = $FgMuted
 $lblSub.Location = New-Object System.Drawing.Point(23, 46)
 $lblSub.Size = New-Object System.Drawing.Size(530, 20)
 $form.Controls.Add($lblSub)
 
-# Статус-блок (Antigravity + Node.js)
 $infoPanel = New-Object System.Windows.Forms.Panel
 $infoPanel.BackColor = $BgPanel
 $infoPanel.Location = New-Object System.Drawing.Point(22, 76)
@@ -118,7 +115,7 @@ $lblAg.Size = New-Object System.Drawing.Size(400, 20)
 $infoPanel.Controls.Add($lblAg)
 
 $btnBrowseAg = New-Object System.Windows.Forms.Button
-$btnBrowseAg.Text = "Выбрать..."
+$btnBrowseAg.Text = "Browse..."
 $btnBrowseAg.Location = New-Object System.Drawing.Point(422, 8)
 $btnBrowseAg.Size = New-Object System.Drawing.Size(86, 26)
 $btnBrowseAg.FlatStyle = 'Flat'
@@ -133,9 +130,9 @@ $lblNode.Size = New-Object System.Drawing.Size(375, 20)
 $infoPanel.Controls.Add($lblNode)
 
 $btnGetNode = New-Object System.Windows.Forms.Button
-$btnGetNode.Text = "Скачать Node.js"
-$btnGetNode.Location = New-Object System.Drawing.Point(392, 38)
-$btnGetNode.Size = New-Object System.Drawing.Size(116, 26)
+$btnGetNode.Text = "Download Node.js"
+$btnGetNode.Location = New-Object System.Drawing.Point(382, 38)
+$btnGetNode.Size = New-Object System.Drawing.Size(126, 26)
 $btnGetNode.FlatStyle = 'Flat'
 $btnGetNode.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 48)
 $btnGetNode.ForeColor = $Accent
@@ -144,16 +141,14 @@ $btnGetNode.Visible = $false
 $btnGetNode.Add_Click({ Start-Process 'https://nodejs.org/' })
 $infoPanel.Controls.Add($btnGetNode)
 
-# Чекбокс авто-перезапуска Antigravity
 $chkAutoRestart = New-Object System.Windows.Forms.CheckBox
-$chkAutoRestart.Text = "Автоматически закрыть Antigravity перед установкой и открыть снова после неё"
+$chkAutoRestart.Text = "Automatically close Antigravity before installation and relaunch it afterwards"
 $chkAutoRestart.Checked = $true
 $chkAutoRestart.ForeColor = $FgText
 $chkAutoRestart.Location = New-Object System.Drawing.Point(24, 160)
 $chkAutoRestart.Size = New-Object System.Drawing.Size(520, 22)
 $form.Controls.Add($chkAutoRestart)
 
-# Лог
 $txtLog = New-Object System.Windows.Forms.TextBox
 $txtLog.Multiline = $true
 $txtLog.ReadOnly = $true
@@ -166,9 +161,8 @@ $txtLog.Location = New-Object System.Drawing.Point(22, 192)
 $txtLog.Size = New-Object System.Drawing.Size(520, 174)
 $form.Controls.Add($txtLog)
 
-# Кнопки действий
 $btnInstall = New-Object System.Windows.Forms.Button
-$btnInstall.Text = "Установить / Обновить"
+$btnInstall.Text = "Install / Update"
 $btnInstall.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
 $btnInstall.Location = New-Object System.Drawing.Point(22, 380)
 $btnInstall.Size = New-Object System.Drawing.Size(260, 38)
@@ -179,7 +173,7 @@ $btnInstall.FlatAppearance.BorderSize = 0
 $form.Controls.Add($btnInstall)
 
 $btnUninstall = New-Object System.Windows.Forms.Button
-$btnUninstall.Text = "Удалить плагин"
+$btnUninstall.Text = "Uninstall"
 $btnUninstall.Location = New-Object System.Drawing.Point(294, 380)
 $btnUninstall.Size = New-Object System.Drawing.Size(136, 38)
 $btnUninstall.FlatStyle = 'Flat'
@@ -189,7 +183,7 @@ $btnUninstall.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(110,
 $form.Controls.Add($btnUninstall)
 
 $btnClose = New-Object System.Windows.Forms.Button
-$btnClose.Text = "Закрыть"
+$btnClose.Text = "Close"
 $btnClose.Location = New-Object System.Drawing.Point(442, 380)
 $btnClose.Size = New-Object System.Drawing.Size(100, 38)
 $btnClose.FlatStyle = 'Flat'
@@ -216,19 +210,19 @@ function Refresh-Environment {
     $script:AsarPath = Resolve-AsarFromExe $script:AgExe
 
     if ($script:AsarPath) {
-        $lblAg.Text = "Antigravity: найден (" + (Split-Path -Parent $script:AgExe) + ")"
+        $lblAg.Text = "Antigravity: found (" + (Split-Path -Parent $script:AgExe) + ")"
         $lblAg.ForeColor = $GreenFg
     } else {
-        $lblAg.Text = "Antigravity: не найден — нажмите «Выбрать...» и укажите Antigravity.exe"
+        $lblAg.Text = "Antigravity: not found — click Browse... to select Antigravity.exe"
         $lblAg.ForeColor = $DangerFg
     }
 
     if ($script:NodeExe) {
-        $lblNode.Text = "Node.js: найден ($($script:NodeExe))"
+        $lblNode.Text = "Node.js: found ($($script:NodeExe))"
         $lblNode.ForeColor = $GreenFg
         $btnGetNode.Visible = $false
     } else {
-        $lblNode.Text = "Node.js: не найден! Установите Node.js LTS и перезапустите установщик."
+        $lblNode.Text = "Node.js: not found! Install Node.js LTS and relaunch this installer."
         $lblNode.ForeColor = $DangerFg
         $btnGetNode.Visible = $true
     }
@@ -236,8 +230,8 @@ function Refresh-Environment {
     $hasPayload = (Test-Path $PayloadDir) -and (Test-Path $InstallScript)
     if (-not $hasPayload) {
         $txtLog.Text = ""
-        Append-Log "[ОШИБКА] Вы запустили установщик прямо из ZIP-архива!"
-        Append-Log "Пожалуйста, сначала РАСПАКУЙТЕ весь архив в обычную папку (правой кнопкой -> Извлечь все), а затем запустите УСТАНОВИТЬ.bat."
+        Append-Log "[ERROR] You launched the installer directly from inside a ZIP archive!"
+        Append-Log "Please EXTRACT the entire archive to a regular folder first (Right-click -> Extract All), then run INSTALL.bat."
         $btnInstall.Enabled = $false
         $btnUninstall.Enabled = $false
     } else {
@@ -248,8 +242,8 @@ function Refresh-Environment {
 
 $btnBrowseAg.Add_Click({
     $dlg = New-Object System.Windows.Forms.OpenFileDialog
-    $dlg.Title = "Выберите Antigravity.exe"
-    $dlg.Filter = "Antigravity (Antigravity.exe)|Antigravity.exe|Все исполняемые (*.exe)|*.exe"
+    $dlg.Title = "Select Antigravity.exe"
+    $dlg.Filter = "Antigravity (Antigravity.exe)|Antigravity.exe|Executables (*.exe)|*.exe"
     if ($dlg.ShowDialog() -eq 'OK') {
         $script:AgExe = $dlg.FileName
         Refresh-Environment
@@ -265,11 +259,11 @@ function Run-NodeScript($scriptPath, $actionLabel) {
     $wasRunning = @(Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue).Count -gt 0
     if ($wasRunning) {
         if ($chkAutoRestart.Checked) {
-            Append-Log "Закрываю Antigravity, чтобы освободить app.asar..."
+            Append-Log "Closing Antigravity to unlock app.asar..."
             Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             Start-Sleep -Milliseconds 1200
         } else {
-            Append-Log "[ВНИМАНИЕ] Antigravity сейчас запущен — если файл app.asar заблокирован, закройте программу."
+            Append-Log "[WARNING] Antigravity is running — if app.asar is locked, close the app first."
         }
     }
 
@@ -307,24 +301,24 @@ function Run-NodeScript($scriptPath, $actionLabel) {
     if ($code -eq 0) {
         Append-Log ""
         Append-Log "=========================================="
-        Append-Log "  УСПЕШНО ЗАВЕРШЕНО!"
+        Append-Log "  COMPLETED SUCCESSFULLY!"
         Append-Log "=========================================="
         if ($chkAutoRestart.Checked -and $script:AgExe -and (Test-Path $script:AgExe)) {
-            Append-Log "Запускаю Antigravity..."
+            Append-Log "Launching Antigravity..."
             Start-Process -FilePath $script:AgExe
         }
         [System.Windows.Forms.MessageBox]::Show(
-            "Готово! Панель «Статус агента» ($Version) установлена.`n`nЕсли Antigravity не открылся сам — просто запустите его, и справа появится панель.",
-            "Статус агента",
+            "Done! Agent Status ($Version) is ready.`n`nIf Antigravity did not launch automatically, simply open it and the status panel will appear on the right.",
+            "Agent Status",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Information
         ) | Out-Null
     } else {
         Append-Log ""
-        Append-Log "[ОШИБКА] Завершено с кодом $code."
+        Append-Log "[ERROR] Process exited with code $code."
         [System.Windows.Forms.MessageBox]::Show(
-            "Возникла ошибка (код $code). Подробности указаны в окне лога.",
-            "Ошибка установки",
+            "An error occurred (exit code $code). See the log window for details.",
+            "Installation Error",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         ) | Out-Null
@@ -333,13 +327,13 @@ function Run-NodeScript($scriptPath, $actionLabel) {
     Refresh-Environment
 }
 
-$btnInstall.Add_Click({ Run-NodeScript $InstallScript "Установка «Статус агента» $Version" })
-$btnUninstall.Add_Click({ Run-NodeScript $UninstallScript "Удаление «Статус агента»" })
+$btnInstall.Add_Click({ Run-NodeScript $InstallScript "Installing Agent Status $Version" })
+$btnUninstall.Add_Click({ Run-NodeScript $UninstallScript "Uninstalling Agent Status" })
 
 Refresh-Environment
 if ((Test-Path $PayloadDir) -and (Test-Path $InstallScript)) {
-    Append-Log "Готов к установке «Статус агента» ($Version)."
-    Append-Log "Нажмите «Установить / Обновить» — установщик сам всё настроит и перезапустит Antigravity."
+    Append-Log "Ready to install Agent Status ($Version)."
+    Append-Log "Click 'Install / Update' — the installer will configure everything and relaunch Antigravity."
 }
 
 [void]$form.ShowDialog()

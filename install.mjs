@@ -70,41 +70,41 @@ function enablePluginInConfig() {
     if (!cfg.plugins || typeof cfg.plugins !== 'object') cfg.plugins = {};
     cfg.plugins['activity-indicator'] = { enabled: true };
     fs.writeFileSync(CONFIG_JSON_PATH, JSON.stringify(cfg, null, 2), 'utf8');
-    console.log('      -> Плагин activity-indicator включён в config.json');
+    console.log('      -> Enabled activity-indicator in config.json');
   } catch (e) {
-    console.warn('      [!] Не удалось обновить config.json:', e.message);
+    console.warn('      [!] Could not update config.json:', e.message);
   }
 }
 
 console.log('==========================================================');
-console.log('  Установка панели «Статус агента» (v1.5.1) для Antigravity');
+console.log('  Installing Agent Status (v1.5.1) for Antigravity');
 console.log('==========================================================\n');
 
 if (!fs.existsSync(PAYLOAD_DIR)) {
-  console.error('[ОШИБКА] Папка payload не найдена рядом с установщиком.');
-  console.error('Распакуйте весь архив в отдельную папку перед запуском!');
+  console.error('[ERROR] The payload folder was not found next to the installer.');
+  console.error('Please extract the entire ZIP archive before running INSTALL.bat!');
   process.exit(1);
 }
 
 const asarPath = resolveAsarPath();
 if (!fs.existsSync(asarPath)) {
-  console.error('[ОШИБКА] Файл app.asar Antigravity не найден:');
+  console.error('[ERROR] Antigravity app.asar not found at:');
   console.error('  ' + asarPath);
-  console.error('Укажите путь к папке Antigravity в окне установщика.');
+  console.error('Use the Browse button in the installer window to select Antigravity.exe.');
   process.exit(1);
 }
 
-console.log('[1/4] Копирую файлы плагина, хуки и пресеты анимаций...');
+console.log('[1/4] Copying plugin files, hooks, and animation presets...');
 copyDirRecursive(PAYLOAD_DIR, PLUGIN_DIR);
 fs.mkdirSync(path.join(PLUGIN_DIR, 'data'), { recursive: true });
 console.log('      -> ' + PLUGIN_DIR);
 
-console.log('\n[2/4] Включаю плагин в конфигурации Antigravity...');
+console.log('\n[2/4] Enabling plugin in Antigravity configuration...');
 enablePluginInConfig();
 
 const sdkPath = path.join(PLUGIN_DIR, 'node_modules', '@modelcontextprotocol', 'sdk', 'package.json');
 if (!fs.existsSync(sdkPath)) {
-  console.log('\n[3/4] Устанавливаю зависимости локального сервера (npm install)...');
+  console.log('\n[3/4] Installing local server dependencies (npm install)...');
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const res = spawnSync(npmCmd, ['install', '--omit=dev', '--no-audit', '--no-fund'], {
     cwd: PLUGIN_DIR,
@@ -112,23 +112,23 @@ if (!fs.existsSync(sdkPath)) {
     shell: process.platform === 'win32'
   });
   if (res.status !== 0) {
-    console.error('\n[ОШИБКА] Не удалось установить npm-зависимости.');
-    console.error('Проверьте подключение к интернету и повторите установку.');
+    console.error('\n[ERROR] Failed to install npm dependencies.');
+    console.error('Please check your internet connection and run INSTALL.bat again.');
     process.exit(1);
   }
 } else {
-  console.log('\n[3/4] Зависимости локального сервера уже установлены — пропускаю.');
+  console.log('\n[3/4] Local server dependencies are already installed — skipping.');
 }
 
-console.log('\n[4/4] Вшиваю автономный загрузчик панели в Antigravity...');
+console.log('\n[4/4] Injecting standalone panel loader into Antigravity...');
 console.log('      -> ' + asarPath);
 const patcherScript = path.join(PLUGIN_DIR, 'patch-asar.mjs');
 try {
   execFileSync(process.execPath, [patcherScript, '--asar=' + asarPath], { stdio: 'inherit' });
 } catch (err) {
-  console.error('\n[ОШИБКА] Не удалось обновить app.asar.');
-  console.error('Закройте Antigravity полностью и повторите установку.');
+  console.error('\n[ERROR] Failed to patch app.asar.');
+  console.error('Make sure Antigravity is completely closed and try again.');
   process.exit(1);
 }
 
-console.log('\n[ГОТОВО] Установка «Статус агента» (v1.5.1) успешно завершена!');
+console.log('\n[DONE] Agent Status (v1.5.1) installed successfully!');

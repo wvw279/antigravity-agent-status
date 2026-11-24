@@ -39,8 +39,8 @@ Requires no third-party patchers or extensions — works out of the box and auto
 ### Steps
 1. Download **`Antigravity-Agent-Status-Installer.zip`** from the [**Releases**](https://github.com/wvw279/antigravity-agent-status/releases/latest) page (or click `Code → Download ZIP`).
 2. **Extract the entire archive** into a regular folder (right-click ZIP → *Extract All*).
-3. Double-click **`УСТАНОВИТЬ.bat`**.
-4. Click **«Установить / Обновить»** in the installer window.
+3. Double-click **`INSTALL.bat`**.
+4. Click **Install / Update** in the installer window.
 
 The installer will automatically:
 - locate Antigravity (or let you pick `Antigravity.exe` manually);
@@ -55,14 +55,14 @@ The installer will automatically:
 
 1. Click the gear icon **`⚙`** in the top-right corner of the panel.
 2. Upload animations for **Working** and **Idle** states (recommended: `1:1`, `256–512 px`).
-3. Enter a name in the preset name field and click **`+ Сохранить`** (or press `Enter`).
+3. Enter a name in the preset name field and click **`+ Save`** (or press `Enter`).
 4. Your preset will appear in the list with a live thumbnail and persist across restarts.
 
 ---
 
 ## Uninstall
 
-Run **`УСТАНОВИТЬ.bat`** (or **`УДАЛИТЬ.bat`**) and click **«Удалить плагин»** — the installer cleanly restores `app.asar`, removes the entry from `config.json`, and deletes plugin files.
+Run **`INSTALL.bat`** (or **`UNINSTALL.bat`**) and click **Uninstall** — the installer cleanly restores `app.asar`, removes the entry from `config.json`, and deletes plugin files.
 
 ---
 ---
@@ -102,8 +102,8 @@ Run **`УСТАНОВИТЬ.bat`** (or **`УДАЛИТЬ.bat`**) and click **«�
 ### Шаги
 1. Скачайте свежий архив **`Antigravity-Agent-Status-Installer.zip`** из раздела [**Releases**](https://github.com/wvw279/antigravity-agent-status/releases/latest) (или нажмите `Code → Download ZIP`).
 2. **Распакуйте весь архив** в обычную папку (правой кнопкой по ZIP → *«Извлечь все»*).
-3. Запустите двойным кликом **`УСТАНОВИТЬ.bat`**.
-4. В открывшемся окне нажмите **«Установить / Обновить»**.
+3. Запустите двойным кликом **`INSTALL.bat`**.
+4. В открывшемся окне нажмите **Install / Update**.
 
 Установщик сам найдёт и закроет Antigravity, скопирует плагин, включит его в `~/.gemini/config/config.json`, пропатчит `app.asar` и **сам снова запустит Antigravity** уже с готовой панелью!
 
@@ -113,17 +113,17 @@ Run **`УСТАНОВИТЬ.bat`** (or **`УДАЛИТЬ.bat`**) and click **«�
 
 1. Нажмите шестерёнку **`⚙`** в правом верхнем углу панели.
 2. Загрузите анимации в слоты **«Во время работы»** и **«В режиме ожидания»** (рекомендуется `1:1`, `256–512 px`).
-3. Введите любое название в поле **«Название своего пресета…»** и нажмите **`+ Сохранить`**.
+3. Введите любое название в поле **«Название своего пресета…»** и нажмите **`+ Сохранить`** (или `Enter`).
 4. Пресет появится в общем списке с мини-превью и будет сохранён между перезапусками.
 
 ---
 
 ## Удаление
 
-Запустите **`УСТАНОВИТЬ.bat`** (или **`УДАЛИТЬ.bat`**) и нажмите кнопку **«Удалить плагин»** — установщик полностью очистит `app.asar`, уберёт запись из `config.json` и удалит файлы плагина.
+Запустите **`INSTALL.bat`** (или **`UNINSTALL.bat`**) и нажмите кнопку **Uninstall** — установщик полностью очистит `app.asar`, уберёт запись из `config.json` и удалит файлы плагина.
 
 ---
 
 ## История изменений / Changelog
 
-Полный список изменений доступен в [CHANGELOG.md](./CHANGELOG.md).
+Full changelog is available in [CHANGELOG.md](./CHANGELOG.md).
