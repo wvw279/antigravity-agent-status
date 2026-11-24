@@ -99,7 +99,7 @@ $lblTitle.AutoSize = $true
 $form.Controls.Add($lblTitle)
 
 $lblSub = New-Object System.Windows.Forms.Label
-$lblSub.Text = "Автономная установка: 6 пресетов + свои пресеты с сохранением + перетаскивание язычка"
+$lblSub.Text = "Автономная установка: 5 пресетов + свои пресеты с сохранением + перетаскивание язычка"
 $lblSub.ForeColor = $FgMuted
 $lblSub.Location = New-Object System.Drawing.Point(23, 46)
 $lblSub.Size = New-Object System.Drawing.Size(530, 20)

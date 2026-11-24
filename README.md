@@ -1,8 +1,73 @@
-# Статус агента (Agent Status) для Antigravity
+# Agent Status for Antigravity
 
 ![Version](https://img.shields.io/badge/version-v1.5.1-d98a3c?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-2b2b34?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-4caf50?style=flat-square)
+
+🇬🇧 **English** | 🇷🇺 [Русская версия ниже](#статус-агента-для-antigravity)
+
+A completely standalone plugin for **Antigravity** that adds a native right-side agent status panel with live 3D animations, an elapsed timer, built-in animal presets, and custom user presets.
+
+Requires no third-party patchers or extensions — works out of the box and automatically self-heals after Antigravity updates.
+
+---
+
+## Features
+
+- **Two display modes:**
+  - **Full mode** — a tall right-side panel displaying live agent activity details (files being read/edited, commands running) and an `MM:SS` timer without shifting or shrinking the chat.
+  - **Compact mode** — a sleek corner card in the top-right corner (resizable from the bottom-left corner `↙`).
+- **Collapsible & draggable tab:** collapse the panel into a compact edge tab and drag it freely up and down along the right edge of the window.
+- **Built-in animal presets:**
+  - **Spider** (default)
+  - **Cat** (calico)
+  - **Snake** (white)
+  - **Koi**
+  - **Lobster**
+- **Custom user presets:** upload any `GIF / WebP / PNG / JPG` (via file picker or drag-and-drop), give your preset a custom name, and save it to the preset list.
+- **Persistent disk storage:** your selected preset, custom presets, panel mode, dimensions, and tab position are saved locally on disk and preserved across restarts.
+
+---
+
+## Quick Installation (Windows)
+
+### Requirements
+- **Antigravity** installed
+- **Node.js LTS** ([nodejs.org](https://nodejs.org/)) — the installer checks this automatically
+- Brief internet connection (~5 sec) on first install to fetch `@modelcontextprotocol/sdk`
+
+### Steps
+1. Download **`Antigravity-Agent-Status-Installer.zip`** from the [**Releases**](https://github.com/wvw279/antigravity-agent-status/releases/latest) page (or click `Code → Download ZIP`).
+2. **Extract the entire archive** into a regular folder (right-click ZIP → *Extract All*).
+3. Double-click **`УСТАНОВИТЬ.bat`**.
+4. Click **«Установить / Обновить»** in the installer window.
+
+The installer will automatically:
+- locate Antigravity (or let you pick `Antigravity.exe` manually);
+- close Antigravity while patching;
+- copy the plugin, enable it in `~/.gemini/config/config.json`, and install dependencies;
+- inject the standalone loader into `app.asar`;
+- **relaunch Antigravity** with the Agent Status panel ready to go.
+
+---
+
+## Creating Custom Presets
+
+1. Click the gear icon **`⚙`** in the top-right corner of the panel.
+2. Upload animations for **Working** and **Idle** states (recommended: `1:1`, `256–512 px`).
+3. Enter a name in the preset name field and click **`+ Сохранить`** (or press `Enter`).
+4. Your preset will appear in the list with a live thumbnail and persist across restarts.
+
+---
+
+## Uninstall
+
+Run **`УСТАНОВИТЬ.bat`** (or **`УДАЛИТЬ.bat`**) and click **«Удалить плагин»** — the installer cleanly restores `app.asar`, removes the entry from `config.json`, and deletes plugin files.
+
+---
+---
+
+# Статус агента для Antigravity
 
 Полностью автономный плагин для **Antigravity**, добавляющий нативную правую панель статуса работы агента с живыми 3D-анимациями, таймером, встроенными пресетами животных и возможностью создавать собственные пресеты.
 
@@ -21,7 +86,7 @@
   - **Кот** (трёхцветный)
   - **Змея** (белая)
   - **Карп кои**
-  - **Лобстер** (красный) + секретный режим ;)
+  - **Лобстер**
 - **Свои пользовательские пресеты:** загружайте любые `GIF / WebP / PNG / JPG` (кликом или перетаскиванием), задавайте пресету своё название и сохраняйте в общий список.
 - **Постоянное сохранение на диск:** выбранный пресет, созданные пользовательские пресеты, режим панели, размеры и позиция язычка сохраняются локально и не пропадают после перезапуска Antigravity.
 
@@ -35,17 +100,12 @@
 - Интернет на 5 секунд при первой установке (для скачивания `@modelcontextprotocol/sdk`)
 
 ### Шаги
-1. Скачайте свежий архив **`Antigravity-Agent-Status-Installer.zip`** из раздела **Releases** (или нажмите `Code → Download ZIP`).
+1. Скачайте свежий архив **`Antigravity-Agent-Status-Installer.zip`** из раздела [**Releases**](https://github.com/wvw279/antigravity-agent-status/releases/latest) (или нажмите `Code → Download ZIP`).
 2. **Распакуйте весь архив** в обычную папку (правой кнопкой по ZIP → *«Извлечь все»*).
 3. Запустите двойным кликом **`УСТАНОВИТЬ.bat`**.
 4. В открывшемся окне нажмите **«Установить / Обновить»**.
 
-Установщик сам:
-- найдёт Antigravity (или позволит выбрать `Antigravity.exe` вручную);
-- закроет Antigravity на время установки;
-- скопирует плагин, включит его в `~/.gemini/config/config.json` и установит зависимости;
-- аккуратно пропатчит `app.asar` автономным загрузчиком;
-- **сам снова запустит Antigravity** уже с готовой панелью «Статус агента»!
+Установщик сам найдёт и закроет Antigravity, скопирует плагин, включит его в `~/.gemini/config/config.json`, пропатчит `app.asar` и **сам снова запустит Antigravity** уже с готовой панелью!
 
 ---
 
@@ -64,6 +124,6 @@
 
 ---
 
-## История изменений
+## История изменений / Changelog
 
 Полный список изменений доступен в [CHANGELOG.md](./CHANGELOG.md).
