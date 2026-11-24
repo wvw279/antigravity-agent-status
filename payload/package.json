@@ -1,0 +1,9 @@
+{
+  "name": "activity-indicator",
+  "version": "1.5.1",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

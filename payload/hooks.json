@@ -1,0 +1,31 @@
+{
+  "activity-indicator-status": {
+    "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node hooks/set-status.mjs working \"Думаю…\"",
+        "timeout": 5
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/set-status.mjs working \"Обрабатываю…\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node hooks/set-status.mjs idle \"Ответ готов\"",
+        "timeout": 5
+      }
+    ]
+  }
+}
