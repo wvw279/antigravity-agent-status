@@ -1,4 +1,4 @@
-// Встроенная правая панель «Статус агента» (v1.6.0 — адаптивная локализация EN/RU под язык приложения)
+// Встроенная правая панель «Статус агента» (v1.6.1 — защита EN-локализации от внешнего русификатора)
 function initActivityPanel() {
     const STYLE_ID = 'ag-activity-panel-style';
     const PANEL_ID = 'ag-activity-panel-root';
@@ -285,7 +285,17 @@ function initActivityPanel() {
     }
 
     let effectiveLang = langMode === 'auto' ? detectAppLanguage() : langMode;
-    const t = (key) => (I18N[effectiveLang] && I18N[effectiveLang][key]) || I18N.en[key] || key;
+    // Защита английских строк от перехвата внешним русификатором (antigravity-features-v2),
+    // который иначе переводит "Compact" -> "Сжать контекст", "Auto" -> "Авто", "Thinking…" -> "Размышление..."
+    const guardEnText = (str) => {
+        if (effectiveLang !== 'en' || !str) return str;
+        return String(str).replace(/\b([A-Za-z]{2})([A-Za-z]+)/g, '$1\u2060$2');
+    };
+    const t = (key) => {
+        const raw = (I18N[effectiveLang] && I18N[effectiveLang][key]) || I18N.en[key] || key;
+        if (key === 'noteHtml') return raw;
+        return guardEnText(raw);
+    };
 
     function localizeStatusDetail(rawDetail) {
         const s = String(rawDetail || '').trim();
@@ -293,6 +303,9 @@ function initActivityPanel() {
         if (effectiveLang === 'ru') return s;
         const exactMap = {
             'Думаю…': 'Thinking…',
+            'Думаю...': 'Thinking…',
+            'Размышление…': 'Thinking…',
+            'Размышление...': 'Thinking…',
             'Обрабатываю…': 'Processing…',
             'Работаю…': 'Working…',
             'Анализирую запрос…': 'Analyzing request…',
@@ -311,7 +324,7 @@ function initActivityPanel() {
             'Ответ готов': 'Response ready',
             'Готов к работе': 'Ready'
         };
-        if (exactMap[s]) return exactMap[s];
+        if (exactMap[s]) return guardEnText(exactMap[s]);
         const prefixMap = [
             ['Читаю ', 'Reading '],
             ['Редактирую ', 'Editing '],
@@ -322,9 +335,9 @@ function initActivityPanel() {
             ['Инструмент: ', 'Tool: ']
         ];
         for (const [ruPrefix, enPrefix] of prefixMap) {
-            if (s.startsWith(ruPrefix)) return enPrefix + s.slice(ruPrefix.length);
+            if (s.startsWith(ruPrefix)) return guardEnText(enPrefix) + s.slice(ruPrefix.length);
         }
-        return s;
+        return guardEnText(s);
     }
 
     const style = document.createElement('style');
@@ -1082,6 +1095,8 @@ function initActivityPanel() {
 
     const panel = document.createElement('aside');
     panel.id = PANEL_ID;
+    panel.setAttribute('translate', 'no');
+    panel.classList.add('notranslate');
     panel.innerHTML = `
         <div class="ag-act-resizer" id="ag-act-resizer" data-i18n-title="resizeWidthTitle" title="Изменить ширину панели"></div>
         <div class="ag-act-corner-resizer" id="ag-act-corner-resizer" data-i18n-title="resizeCornerTitle" title="Потяните, чтобы изменить размер окна">↙</div>
@@ -2745,12 +2760,12 @@ function initActivityPanel() {
             if (panelMode === 'mini') {
                 // В компактном виде показываем только короткий статус,
                 // чтобы длинный текст не сжимал и не дёргал круг с гифкой
-                const isThinking = !hookDetail || hookDetail === 'Думаю…' || hookDetail.startsWith('Анализир') || /^think|^analyz/i.test(hookDetail);
+                const isThinking = !hookDetail || hookDetail === 'Думаю…' || hookDetail.startsWith('Анализир') || hookDetail.startsWith('Размышл') || /^think|^analyz/i.test(hookDetail);
                 elDetail.textContent = isThinking ? t('thinkingShort') : t('workingShort');
             } else {
                 const isGeneric = !hookDetail || hookDetail === 'Думаю…' || hookDetail === 'Обрабатываю…' || hookDetail === 'Работаю…';
                 const liveDom = isGeneric ? readLiveDomStatus() : '';
-                elDetail.textContent = liveDom || localizeStatusDetail(hookDetail);
+                elDetail.textContent = localizeStatusDetail(liveDom || hookDetail);
             }
             elTimer.textContent = formatElapsed(now - (currentState.startedAt || now));
         } else {

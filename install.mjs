@@ -77,7 +77,7 @@ function enablePluginInConfig() {
 }
 
 console.log('==========================================================');
-console.log('  Installing Agent Status (v1.6.0) for Antigravity');
+console.log('  Installing Agent Status (v1.6.1) for Antigravity');
 console.log('==========================================================\n');
 
 if (!fs.existsSync(PAYLOAD_DIR)) {
@@ -131,4 +131,4 @@ try {
   process.exit(1);
 }
 
-console.log('\n[DONE] Agent Status (v1.6.0) installed successfully!');
+console.log('\n[DONE] Agent Status (v1.6.1) installed successfully!');

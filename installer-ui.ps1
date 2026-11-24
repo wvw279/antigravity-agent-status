@@ -6,7 +6,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PayloadDir = Join-Path $ScriptDir 'payload'
 $InstallScript = Join-Path $ScriptDir 'install.mjs'
 $UninstallScript = Join-Path $ScriptDir 'uninstall.mjs'
-$Version = 'v1.6.0'
+$Version = 'v1.6.1'
 
 function Find-NodeExe {
     $cmd = Get-Command node.exe -ErrorAction SilentlyContinue
