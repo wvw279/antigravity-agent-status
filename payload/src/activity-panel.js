@@ -1,4 +1,4 @@
-// Встроенная правая панель «Статус агента» (v1.7.0 — адаптация под Antigravity 2.36.0 и умный автопатчер)
+// Встроенная правая панель «Статус агента» (v1.7.1 — мгновенный сброс статуса при отмене агента пользователем)
 function initActivityPanel() {
     const STYLE_ID = 'ag-activity-panel-style';
     const PANEL_ID = 'ag-activity-panel-root';
@@ -2716,8 +2716,80 @@ function initActivityPanel() {
         assetsLoading = false;
     }
 
-    let currentState = { state: 'idle', detail: 'Готов к работе', startedAt: null, now: Date.now() };
+    let currentState = { state: 'idle', detail: 'Готов к работе', startedAt: null, updatedAt: 0, now: Date.now() };
     let inFlight = false;
+    let wasWorkingState = false;
+    let cancelCountAtStart = 0;
+    let lastCancelResetUpdatedAt = 0;
+
+    const CANCEL_NOTICE_RE = /Пользователь отменил выполнение агента|User cancel+ed|Agent execution cancel+ed|Cancelled by user|Canceled by user|Stopped by user|Generation stopped/i;
+
+    function countVisibleCancelNotices() {
+        try {
+            let count = 0;
+            const els = document.querySelectorAll('p, div, span');
+            for (const el of els) {
+                if (!el || el.childElementCount > 2) continue;
+                if (panel.contains(el) || tab.contains(el)) continue;
+                const txt = (el.textContent || '').trim();
+                if (txt.length < 12 || txt.length > 140) continue;
+                if (!CANCEL_NOTICE_RE.test(txt)) continue;
+                const r = el.getBoundingClientRect();
+                if (r.width > 20 && r.height > 8) count += 1;
+            }
+            return count;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function triggerCancelledIdle(seenUpdatedAt) {
+        const refUpdated = seenUpdatedAt || currentState.updatedAt || 0;
+        if (refUpdated && lastCancelResetUpdatedAt === refUpdated) return;
+        lastCancelResetUpdatedAt = refUpdated || Date.now();
+        currentState = {
+            state: 'idle',
+            detail: 'Готов к работе',
+            startedAt: null,
+            updatedAt: Date.now(),
+            now: Date.now()
+        };
+        wasWorkingState = false;
+        renderStatus();
+        try {
+            fetchFromAnyServer('/activity-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    state: 'idle',
+                    detail: 'Готов к работе',
+                    ifUpdatedAt: refUpdated
+                })
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
+    // Отслеживаем клик по кнопке Стоп/Отмена в интерфейсе Antigravity во время работы агента
+    let stopClickCheckTimer = 0;
+    const onGlobalStopClick = (ev) => {
+        if (currentState.state !== 'working') return;
+        const target = ev.target && ev.target.closest ? ev.target.closest('button, [role="button"]') : null;
+        if (!target || panel.contains(target) || tab.contains(target)) return;
+        const label = ((target.getAttribute('aria-label') || '') + ' ' + (target.getAttribute('title') || '') + ' ' + (target.textContent || '')).trim();
+        if (!/stop|cancel|abort|останов|отмен|прерв/i.test(label)) return;
+        const seenUpdated = currentState.updatedAt || 0;
+        if (stopClickCheckTimer) clearTimeout(stopClickCheckTimer);
+        stopClickCheckTimer = setTimeout(() => {
+            stopClickCheckTimer = 0;
+            if (currentState.state === 'working' && (currentState.updatedAt || 0) === seenUpdated) {
+                const liveNow = readLiveDomStatus();
+                if (!liveNow || countVisibleCancelNotices() > cancelCountAtStart) {
+                    triggerCancelledIdle(seenUpdated);
+                }
+            }
+        }, 450);
+    };
+    window.addEventListener('click', onGlobalStopClick, true);
 
     function formatElapsed(ms) {
         const sec = Math.max(0, Math.floor(ms / 1000));
@@ -2748,7 +2820,20 @@ function initActivityPanel() {
 
     function renderStatus() {
         const now = Date.now();
-        const isWorking = currentState.state === 'working';
+        let isWorking = currentState.state === 'working';
+
+        if (isWorking && !wasWorkingState) {
+            wasWorkingState = true;
+            cancelCountAtStart = countVisibleCancelNotices();
+        } else if (!isWorking && wasWorkingState) {
+            wasWorkingState = false;
+        }
+
+        // Если во время работы в чате появилось новое уведомление об отмене агента — мгновенно переводим в idle
+        if (isWorking && countVisibleCancelNotices() > cancelCountAtStart) {
+            triggerCancelledIdle(currentState.updatedAt || 0);
+            return;
+        }
 
         elHeaderDot.classList.toggle('working', isWorking);
         elTabDot.classList.toggle('working', isWorking);
@@ -2781,7 +2866,12 @@ function initActivityPanel() {
             const resp = await fetchFromAnyServer('/activity-status');
             const data = await resp.json();
             if (data && typeof data.state === 'string') {
-                currentState = data;
+                // Если этот конкретный working уже был сброшен локально из-за отмены — не возвращаем его
+                if (data.state === 'working' && lastCancelResetUpdatedAt && Number(data.updatedAt || 0) <= lastCancelResetUpdatedAt) {
+                    currentState = { state: 'idle', detail: 'Готов к работе', startedAt: null, updatedAt: data.updatedAt || 0, now: Date.now() };
+                } else {
+                    currentState = data;
+                }
             }
             if (!assetsLoaded) ensureAssetsLoaded();
         } catch (e) {
@@ -2804,11 +2894,13 @@ function initActivityPanel() {
     window.__ag_activity_panel_top_sync = setInterval(() => syncLayout(false), 600);
 
     const disposeSelf = () => {
+        if (stopClickCheckTimer) clearTimeout(stopClickCheckTimer);
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onMouseUp);
         window.removeEventListener('mousemove', onThumbMove);
         window.removeEventListener('mouseup', onThumbUp);
         window.removeEventListener('scroll', onGlobalScrollCapture, true);
+        window.removeEventListener('click', onGlobalStopClick, true);
         window.removeEventListener('resize', onWindowResize);
     };
     window.__ag_activity_panel_dispose = disposeSelf;

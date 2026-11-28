@@ -1,4 +1,4 @@
-Agent Status Panel (v1.7.0) for Antigravity
+Agent Status Panel (v1.7.1) for Antigravity
 ===============================================
 
 Features:

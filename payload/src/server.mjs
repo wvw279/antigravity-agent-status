@@ -374,12 +374,50 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
-  if (reqPath === '/activity-status') {
+  if (reqPath === '/activity-status' && req.method === 'GET') {
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate'
     });
     res.end(JSON.stringify(readStatus()));
+    return;
+  }
+
+  if (reqPath === '/activity-status' && req.method === 'POST') {
+    try {
+      const body = await readJsonBody(req, 64 * 1024);
+      const cur = readStatus();
+      // Защита от гонки: не сбрасываем статус, если уже началось более новое действие агента
+      if (body && body.ifUpdatedAt && cur.updatedAt && Number(body.ifUpdatedAt) < Number(cur.updatedAt)) {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, skipped: true }));
+        return;
+      }
+      const nextState = body && body.state === 'working' ? 'working' : 'idle';
+      const now = Date.now();
+      const nextData = {
+        state: nextState,
+        detail: String((body && body.detail) || (nextState === 'working' ? 'Работаю…' : 'Готов к работе')),
+        startedAt: nextState === 'working' ? now : null,
+        updatedAt: now
+      };
+      const jsonStr = JSON.stringify(nextData);
+      for (const filePath of Array.from(new Set([STATUS_FILE, LOCAL_STATUS_FILE]))) {
+        try {
+          fs.mkdirSync(path.dirname(filePath), { recursive: true });
+          const tmp = filePath + '.tmp';
+          fs.writeFileSync(tmp, jsonStr, 'utf8');
+          fs.renameSync(tmp, filePath);
+        } catch {
+          try { fs.writeFileSync(filePath, jsonStr, 'utf8'); } catch {}
+        }
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: true }));
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: false }));
+    }
     return;
   }
 
