@@ -1,4 +1,4 @@
-// Встроенная правая панель «Статус агента» (v1.6.1 — защита EN-локализации от внешнего русификатора)
+// Встроенная правая панель «Статус агента» (v1.7.0 — адаптация под Antigravity 2.36.0 и умный автопатчер)
 function initActivityPanel() {
     const STYLE_ID = 'ag-activity-panel-style';
     const PANEL_ID = 'ag-activity-panel-root';

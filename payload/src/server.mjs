@@ -28,6 +28,8 @@ const CUSTOM_PRESETS_DIR = path.join(dataDir, 'custom-presets');
 const HTML_FILE = path.join(PLUGIN_ROOT, 'dist', 'app.html');
 const PANEL_JS_FILE = path.join(PLUGIN_ROOT, 'src', 'activity-panel.js');
 const PATCHER_FILE = path.join(PLUGIN_ROOT, 'patch-asar.mjs');
+const AUTO_PATCHER_FILE = path.join(PLUGIN_ROOT, 'auto-patcher.mjs');
+const AUTO_PATCHER_STATUS_FILE = path.join(dataDir, 'auto-patcher.json');
 const DOCS_SYNC_FILE = '';
 const APP_URI = 'ui://activity-indicator/app.html';
 
@@ -381,6 +383,21 @@ const httpServer = http.createServer(async (req, res) => {
     return;
   }
 
+  if (reqPath === '/auto-patcher-status') {
+    let st = { state: 'unknown' };
+    try {
+      if (fs.existsSync(AUTO_PATCHER_STATUS_FILE)) {
+        st = JSON.parse(fs.readFileSync(AUTO_PATCHER_STATUS_FILE, 'utf8'));
+      }
+    } catch {}
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate'
+    });
+    res.end(JSON.stringify(st));
+    return;
+  }
+
   if (reqPath === '/activity-assets/working.gif' || reqPath === '/activity-assets/idle.gif') {
     const fileName = reqPath.endsWith('working.gif') ? 'working.gif' : 'idle.gif';
     const assetPath = path.join(PLUGIN_ROOT, 'assets', fileName);
@@ -421,31 +438,33 @@ try {
 process.stdin.on('end', () => process.exit(0));
 process.stdin.on('close', () => process.exit(0));
 
-// 5. Автономное самовосстановление: если обновление самой IDE перезаписало app.asar — возвращаем загрузчик
+// 5. Автономный автопатчер: отслеживает обновления Antigravity и восстанавливает загрузчик в app.asar
+//    (если файл заблокирован процессом IDE — тихо ждёт закрытия Antigravity и патчит сразу после выхода)
 let isHealing = false;
-function checkAndHealAsar() {
-  if (isHealing || !fs.existsSync(PATCHER_FILE)) return;
+function runAutoPatcher() {
+  if (isHealing) return;
+  const targetScript = fs.existsSync(AUTO_PATCHER_FILE) ? AUTO_PATCHER_FILE : PATCHER_FILE;
+  if (!fs.existsSync(targetScript)) return;
   try {
-    const isMac = process.platform === 'darwin';
-    const asarPath = isMac
-      ? '/Applications/Antigravity.app/Contents/Resources/app.asar'
-      : path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Antigravity', 'resources', 'app.asar');
-    if (!fs.existsSync(asarPath)) return;
-    // Быстрая проверка: если загрузчик уже на месте, ничего не делаем
-    const checkChild = spawn(process.execPath, [PATCHER_FILE, '--check-and-patch'], {
+    const args = targetScript === AUTO_PATCHER_FILE
+      ? [targetScript, `--data_dir=${dataDir}`]
+      : [targetScript, '--check-and-patch'];
+    const child = spawn(process.execPath, args, {
       windowsHide: true,
       stdio: 'ignore',
       detached: true
     });
     isHealing = true;
-    checkChild.on('exit', () => { isHealing = false; });
-    checkChild.on('error', () => { isHealing = false; });
-    checkChild.unref();
+    child.on('exit', () => { isHealing = false; });
+    child.on('error', () => { isHealing = false; });
+    child.unref();
   } catch {
     isHealing = false;
   }
 }
-setTimeout(checkAndHealAsar, 6000);
+setTimeout(runAutoPatcher, 4000);
+const autoPatchInterval = setInterval(runAutoPatcher, 10 * 60 * 1000);
+autoPatchInterval.unref();
 setTimeout(triggerDocsSync, 3000);
 
 const transport = new StdioServerTransport();

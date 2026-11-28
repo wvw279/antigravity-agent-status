@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import vm from 'vm';
+import { execFileSync } from 'child_process';
 
 const BEGIN_MARKER = '// BEGIN AG-ACTIVITY-PANEL';
 const END_MARKER = '// END AG-ACTIVITY-PANEL';
@@ -55,6 +56,27 @@ const LOADER_SNIPPET = `${BEGIN_MARKER}
 })();
 ${END_MARKER}`;
 
+function detectAsarFromRunningProcess() {
+  if (process.platform !== 'win32') return '';
+  try {
+    const out = execFileSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        "(Get-Process -Name 'Antigravity' -ErrorAction SilentlyContinue | Select-Object -First 1).Path"
+      ],
+      { encoding: 'utf8', timeout: 2500, windowsHide: true }
+    ).trim();
+    if (out) {
+      const candidate = path.join(path.dirname(out), 'resources', 'app.asar');
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  } catch {}
+  return '';
+}
+
 function resolveAsarPath(explicitPath) {
   if (explicitPath && fs.existsSync(explicitPath)) return explicitPath;
   if (process.platform === 'darwin') {
@@ -74,7 +96,10 @@ function resolveAsarPath(explicitPath) {
     path.join(programFiles, 'Antigravity', 'resources', 'app.asar'),
     path.join(programFilesX86, 'Antigravity', 'resources', 'app.asar')
   ];
-  return candidates.find((p) => fs.existsSync(p)) || candidates[0];
+  const found = candidates.find((p) => fs.existsSync(p));
+  if (found) return found;
+  const fromProc = detectAsarFromRunningProcess();
+  return fromProc || candidates[0];
 }
 
 function readAsar(asarPath) {
@@ -85,6 +110,51 @@ function readAsar(asarPath) {
   const dataStart = 8 + headerPickleSize;
   const header = JSON.parse(headerJsonStr);
   return { buf, header, dataStart };
+}
+
+function readAntigravityVersion(buf, header, dataStart) {
+  try {
+    const pkgEntry = header?.files?.['package.json'];
+    if (!pkgEntry || typeof pkgEntry.offset === 'undefined') return '';
+    const raw = buf.subarray(dataStart + Number(pkgEntry.offset), dataStart + Number(pkgEntry.offset) + Number(pkgEntry.size)).toString('utf8');
+    const pkg = JSON.parse(raw);
+    return String(pkg.version || '');
+  } catch {
+    return '';
+  }
+}
+
+// Умный поиск главного preload.js внутри app.asar (поддержка будущих версий Antigravity)
+function findMainPreloadEntry(header) {
+  const direct = header?.files?.dist?.files?.['preload.js'];
+  if (direct && typeof direct.offset !== 'undefined') {
+    return { entry: direct, relPath: 'dist/preload.js' };
+  }
+  const preferredDirs = ['dist', 'out', 'build', 'app'];
+  for (const dir of preferredDirs) {
+    const cand = header?.files?.[dir]?.files?.['preload.js'];
+    if (cand && typeof cand.offset !== 'undefined') {
+      return { entry: cand, relPath: `${dir}/preload.js` };
+    }
+  }
+  // Резервный поиск по дереву (исключая node_modules)
+  let best = null;
+  function walk(node, prefix) {
+    if (!node || !node.files) return;
+    for (const [name, child] of Object.entries(node.files)) {
+      if (name === 'node_modules') continue;
+      const rel = prefix ? `${prefix}/${name}` : name;
+      if (child.files) {
+        walk(child, rel);
+      } else if (name === 'preload.js' && typeof child.offset !== 'undefined') {
+        if (!best || Number(child.size || 0) > Number(best.entry.size || 0)) {
+          best = { entry: child, relPath: rel };
+        }
+      }
+    }
+  }
+  walk(header, '');
+  return best;
 }
 
 function buildIntegrity(fileBuf, blockSize = 4 * 1024 * 1024) {
@@ -153,8 +223,11 @@ function writePatchedAsar(asarPath, header, dataSection, appendedBuf) {
   try {
     fs.renameSync(tmpPath, asarPath);
   } catch {
-    fs.writeFileSync(asarPath, outBuf);
-    try { fs.unlinkSync(tmpPath); } catch {}
+    try {
+      fs.writeFileSync(asarPath, outBuf);
+    } finally {
+      try { fs.unlinkSync(tmpPath); } catch {}
+    }
   }
 }
 
@@ -162,6 +235,8 @@ const argv = process.argv.slice(2);
 const args = new Set(argv);
 const isUnpatch = args.has('--unpatch');
 const isCheckAndPatch = args.has('--check-and-patch');
+const isReportStatus = args.has('--report-status');
+const isJson = args.has('--json');
 let explicitAsar = '';
 for (const a of argv) {
   if (a.startsWith('--asar=')) {
@@ -169,36 +244,53 @@ for (const a of argv) {
   }
 }
 
+function finish(code, payload, humanMsg) {
+  if (isJson) {
+    process.stdout.write(JSON.stringify(payload) + '\n');
+  } else if (humanMsg) {
+    if (code === 1 || code === 3) console.error(humanMsg);
+    else console.log(humanMsg);
+  }
+  process.exit(code);
+}
+
 const asarPath = resolveAsarPath(explicitAsar);
 if (!fs.existsSync(asarPath)) {
-  console.error('[patch-asar] app.asar не найден:', asarPath);
-  process.exit(1);
+  finish(1, { status: 'not_found', asarPath }, `[patch-asar] app.asar не найден: ${asarPath}`);
 }
 
-const { buf, header, dataStart } = readAsar(asarPath);
-const preloadEntry = header?.files?.dist?.files?.['preload.js'];
-if (!preloadEntry || typeof preloadEntry.offset === 'undefined') {
-  console.error('[patch-asar] dist/preload.js не найден внутри app.asar');
-  process.exit(1);
+let parsed;
+try {
+  parsed = readAsar(asarPath);
+} catch (err) {
+  const locked = err && (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES');
+  finish(locked && isReportStatus ? 3 : 1, { status: locked ? 'locked' : 'read_error', asarPath, error: err?.message }, `[patch-asar] Ошибка чтения app.asar: ${err?.message}`);
 }
 
+const { buf, header, dataStart } = parsed;
+const agVersion = readAntigravityVersion(buf, header, dataStart);
+const preloadInfo = findMainPreloadEntry(header);
+if (!preloadInfo) {
+  finish(1, { status: 'preload_not_found', asarPath, agVersion }, '[patch-asar] preload.js не найден внутри app.asar');
+}
+
+const { entry: preloadEntry, relPath: preloadRelPath } = preloadInfo;
 const oldOffset = Number(preloadEntry.offset);
 const oldSize = Number(preloadEntry.size);
 const oldPreloadCode = buf.subarray(dataStart + oldOffset, dataStart + oldOffset + oldSize).toString('utf8');
 
 const alreadyUpToDate = oldPreloadCode.includes(LOADER_SNIPPET) && !hasLegacyInlinePanel(oldPreloadCode);
 if (isCheckAndPatch && alreadyUpToDate) {
-  process.exit(0);
+  finish(0, { status: 'already_patched', asarPath, agVersion, preloadRelPath }, '');
 }
 if (isUnpatch && !oldPreloadCode.includes(BEGIN_MARKER)) {
-  console.log('[patch-asar] Загрузчик уже отсутствует в app.asar.');
-  process.exit(0);
+  finish(0, { status: 'already_clean', asarPath, agVersion, preloadRelPath }, '[patch-asar] Загрузчик уже отсутствует в app.asar.');
 }
 
 const nextPreloadCode = isUnpatch ? stripOurBlock(oldPreloadCode) : injectOurBlock(oldPreloadCode);
 
 // Проверяем синтаксис перед записью в app.asar
-new vm.Script(nextPreloadCode, { filename: 'dist/preload.js' });
+new vm.Script(nextPreloadCode, { filename: preloadRelPath });
 
 const dataSection = buf.subarray(dataStart);
 const nextPreloadBuf = Buffer.from(nextPreloadCode, 'utf8');
@@ -208,9 +300,22 @@ if (preloadEntry.integrity) {
   preloadEntry.integrity = buildIntegrity(nextPreloadBuf, preloadEntry.integrity.blockSize || 4 * 1024 * 1024);
 }
 
-writePatchedAsar(asarPath, header, dataSection, nextPreloadBuf);
-console.log(
+try {
+  writePatchedAsar(asarPath, header, dataSection, nextPreloadBuf);
+} catch (err) {
+  const locked = err && (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES');
+  finish(
+    locked && isReportStatus ? 3 : 1,
+    { status: locked ? 'locked' : 'write_error', asarPath, agVersion, error: err?.message },
+    `[patch-asar] Не удалось записать app.asar (${err?.code || 'ERR'}): ${err?.message}`
+  );
+}
+
+const successCode = (!isUnpatch && isReportStatus) ? 2 : 0;
+finish(
+  successCode,
+  { status: isUnpatch ? 'unpatched' : 'patched', asarPath, agVersion, preloadRelPath },
   isUnpatch
-    ? '[patch-asar] Загрузчик «Статус агента» удалён из app.asar.'
-    : '[patch-asar] Автономный загрузчик «Статус агента» успешно вшит в app.asar (syntax OK).'
+    ? `[patch-asar] Загрузчик «Статус агента» удалён из app.asar (Antigravity ${agVersion || 'unknown'}).`
+    : `[patch-asar] Автономный загрузчик «Статус агента» успешно вшит в ${preloadRelPath} (Antigravity ${agVersion || 'unknown'}, syntax OK).`
 );
